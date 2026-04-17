@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tilt Maze Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #f0f0f0;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #eeeeee;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-overlay">Use tilt to move the circle! Touch to pass through walls.</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // Global Variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const tileSize = 40;
+        let player = { x: 0, y: 0, radius: 15 };
+        let level = [];
+        let levelWidth, levelHeight;
+        let startX, startY, endX, endY;
+        let touching = false;
+
+        // Initialize canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            levelWidth = Math.floor(canvas.width / tileSize);
+            levelHeight = Math.floor(canvas.height / tileSize);
+            generateLevel();
+            placePlayer();
+        }
+
+        // Random level generation
+        function generateLevel() {
+            level = [];
+            for (let y = 0; y < levelHeight; y++) {
+                let row = [];
+                for (let x = 0; x < levelWidth; x++) {
+                    row.push(Math.random() > 0.7 ? 1 : 0);  // 1 = wall, 0 = free space
+                }
+                level.push(row);
+            }
+            // Ensure player and goal are in free space
+            do {
+                startX = Math.floor(Math.random() * levelWidth);
+                startY = Math.floor(Math.random() * levelHeight);
+            } while (level[startY][startX] !== 0);
+
+            do {
+                endX = Math.floor(Math.random() * levelWidth);
+                endY = Math.floor(Math.random() * levelHeight);
+            } while (level[endY][endX] !== 0 || (endX === startX && endY === startY));
+        }
+
+        // Place player at random start position
+        function placePlayer() {
+            player.x = startX * tileSize + tileSize / 2;
+            player.y = startY * tileSize + tileSize / 2;
+        }
+
+        // Draw level (walls and free spaces)
+        function drawLevel() {
+            for (let y = 0; y < levelHeight; y++) {
+                for (let x = 0; x < levelWidth; x++) {
+                    if (level[y][x] === 1) {
+                        ctx.fillStyle = 'blue';  // Wall color (water)
+                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    } else {
+                        ctx.fillStyle = 'white';  // Empty space
+                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        // Draw player
+        function drawPlayer() {
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Check if player is touching wall
+        function isTouchingWall() {
+            const playerTileX = Math.floor(player.x / tileSize);
+            const playerTileY = Math.floor(player.y / tileSize);
+            return level[playerTileY] && level[playerTileY][playerTileX] === 1;
+        }
+
+        // Update game state
+        function update() {
+            if (touching) {
+                // If touching, allow movement through walls
+                if (isTouchingWall()) {
+                    return;
+                }
+            } else {
+                if (isTouchingWall()) {
+                    return;
+                }
+            }
+
+            drawLevel();
+            drawPlayer();
+        }
+
+        // Handle device tilt (gyro control)
+        window.addEventListener('deviceorientation', function (event) {
+            const tiltX = event.gamma || 0; // Left-right tilt
+            const tiltY = event.beta || 0;  // Up-down tilt
+
+            // Adjust player position based on tilt
+            const moveSpeed = 4;
+            player.x -= tiltX / 10 * moveSpeed;
+            player.y += tiltY / 10 * moveSpeed;
+
+            // Constrain player inside canvas bounds
+            player.x = Math.max(player.radius, Math.min(player.x, canvas.width - player.radius));
+            player.y = Math.max(player.radius, Math.min(player.y, canvas.height - player.radius));
+
+            update();
+        });
+
+        // Touch event to pass through walls
+        canvas.addEventListener('touchstart', function () {
+            touching = true;
+            update();
+        });
+
+        canvas.addEventListener('touchend', function () {
+            touching = false;
+            update();
+        });
+
+        // Check if player reached the end point
+        function checkWin() {
+            const playerTileX = Math.floor(player.x / tileSize);
+            const playerTileY = Math.floor(player.y / tileSize);
+            if (playerTileX === endX && playerTileY === endY) {
+                alert('You Win!');
+                generateLevel();
+                placePlayer();
+                update();
+            }
+        }
+
+        // Resize and initialize game
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        setInterval(checkWin, 100); // Check win condition every 100ms
+    </script>
+</body>
+</html>
