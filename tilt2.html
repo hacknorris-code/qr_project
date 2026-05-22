@@ -1,0 +1,147 @@
+<style>
+  * {
+    background: #000;
+    margin: 20px auto;
+  }
+
+  #gameCanvas {
+    display: block;
+    border:solid grey 1px;
+  }
+
+  #score {
+    color: #0f0;
+    font: 24px sans-serif;
+    text-align: center;
+  }
+</style>
+
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+<div id="score">0</div>
+
+<script>
+class Game {
+  constructor(canvas, scoreElement) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.scoreElement = scoreElement;
+
+    this.player = new Player(30, 280);
+    this.target = new Target(50, 50);
+
+    this.score = 0;
+    this.started = false;
+
+    this.bindEvents();
+    this.startLoop();
+  }
+
+  bindEvents() {
+    window.onclick = async () => {
+      if (!this.started) {
+        await this.requestOrientationPermission();
+        this.bindOrientation();
+        this.started;
+      }
+    };
+  }
+
+  async requestOrientationPermission() {
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        await DeviceOrientationEvent.requestPermission();
+      }
+    } catch (e) {}
+  }
+
+  bindOrientation() {
+    window.ondeviceorientation = (e) => {
+      this.player.applyInput(e.gamma / 10, e.beta / 10);
+    };
+  }
+
+  startLoop() {
+    setInterval(() => this.update(), 16);
+  }
+
+  update() {
+    this.player.update();
+    this.player.clamp(this.canvas.width - 24, this.canvas.height - 24);
+
+    if (this.player.isNear(this.target, 24)) {
+      this.score++;
+      this.scoreElement.textContent = this.score;
+      this.target.randomize();
+    }
+
+    this.render();
+  }
+
+  render() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.font = '40px sans-serif';
+
+    this.target.draw(this.ctx);
+    this.player.draw(this.ctx);
+  }
+}
+
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+  }
+
+  applyInput(dx, dy) {
+    this.vx += dx;
+    this.vy += dy;
+  }
+
+  update() {
+    this.vx *= 0.95;
+    this.vy *= 0.95;
+
+    this.x += this.vx;
+    this.y += this.vy;
+  }
+
+  clamp(maxX, maxY) {
+    this.x = Math.max(0, Math.min(maxX, this.x));
+    this.y = Math.max(0, Math.min(maxY, this.y));
+  }
+
+  isNear(target, distance) {
+    return Math.hypot(this.x - target.x, this.y - target.y) < distance;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = '#f80';
+    ctx.fillText('●', this.x, this.y + 30);
+  }
+}
+
+class Target {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  randomize() {
+    this.x = Math.random() * 270;
+    this.y = Math.random() * 270;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = '#80f';
+    ctx.fillText('▲', this.x, this.y + 30);
+  }
+}
+
+// bootstrap
+const canvas = document.getElementById('gameCanvas');
+const scoreEl = document.getElementById('score');
+
+new Game(canvas, scoreEl);
+</script>

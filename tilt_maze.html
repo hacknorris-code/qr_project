@@ -129,7 +129,7 @@
         }
 
         // Handle device tilt (gyro control)
-        window.addEventListener('deviceorientation', function (event) {
+        window.onclick = ()=>{window.addEventListener('deviceorientation', function (event) {
             const tiltX = event.gamma || 0; // Left-right tilt
             const tiltY = event.beta || 0;  // Up-down tilt
 
@@ -143,7 +143,7 @@
             player.y = Math.max(player.radius, Math.min(player.y, canvas.height - player.radius));
 
             update();
-        });
+        })};
 
         // Touch event to pass through walls
         canvas.addEventListener('touchstart', function () {

@@ -1,0 +1,156 @@
+<style>
+  * {
+    background: #000;
+    margin: 20px auto;
+  }
+
+  #gameSvg {
+    display: block;
+    border: solid grey 1px;
+    background: #000;
+  }
+
+  #score {
+    color: #0f0;
+    font: 24px sans-serif;
+    text-align: center;
+  }
+</style>
+
+<svg id="gameSvg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- player -->
+  <circle id="player" r="10" fill="#f80" />
+
+  <!-- target -->
+  <polygon id="target" points="0,20 10,0 20,20" fill="#80f" />
+</svg>
+
+<div id="score">0</div>
+
+<script>
+class Game {
+  constructor(svg, scoreElement) {
+    this.svg = svg;
+    this.scoreElement = scoreElement;
+
+    this.player = new Player(svg.querySelector('#player'), 30, 280);
+    this.target = new Target(svg.querySelector('#target'), 50, 50);
+
+    this.score = 0;
+    this.started = false;
+
+    this.bindEvents();
+    this.startLoop();
+  }
+
+  bindEvents() {
+    window.onclick = async () => {
+      if (!this.started) {
+        await this.requestOrientationPermission();
+        this.bindOrientation();
+        this.started = true;
+      }
+    };
+  }
+
+  async requestOrientationPermission() {
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        await DeviceOrientationEvent.requestPermission();
+      }
+    } catch (e) {}
+  }
+
+  bindOrientation() {
+    window.ondeviceorientation = (e) => {
+      this.player.applyInput(e.gamma / 10, e.beta / 10);
+    };
+  }
+
+  startLoop() {
+    setInterval(() => this.update(), 16);
+  }
+
+  update() {
+    this.player.update();
+    this.player.clamp(400, 400);
+
+    if (this.player.isNear(this.target, 24)) {
+      this.score++;
+      this.scoreElement.textContent = this.score;
+      this.target.randomize();
+    }
+
+    this.render();
+  }
+
+  render() {
+    this.player.render();
+    this.target.render();
+  }
+}
+
+class Player {
+  constructor(element, x, y) {
+    this.el = element;
+
+    this.x = x;
+    this.y = y;
+
+    this.vx = 0;
+    this.vy = 0;
+  }
+
+  applyInput(dx, dy) {
+    this.vx += dx;
+    this.vy += dy;
+  }
+
+  update() {
+    this.vx *= 0.95;
+    this.vy *= 0.95;
+
+    this.x += this.vx;
+    this.y += this.vy;
+  }
+
+  clamp(maxX, maxY) {
+    this.x = Math.max(0, Math.min(maxX, this.x));
+    this.y = Math.max(0, Math.min(maxY, this.y));
+  }
+
+  isNear(target, distance) {
+    return Math.hypot(this.x - target.x, this.y - target.y) < distance;
+  }
+
+  render() {
+    this.el.setAttribute('cx', this.x);
+    this.el.setAttribute('cy', this.y);
+  }
+}
+
+class Target {
+  constructor(element, x, y) {
+    this.el = element;
+
+    this.x = x;
+    this.y = y;
+  }
+
+  randomize() {
+    this.x = Math.random() * 270;
+    this.y = Math.random() * 270;
+  }
+
+  render() {
+    // move polygon via transform (cleaner than rewriting points)
+    this.el.setAttribute('transform', `translate(${this.x}, ${this.y})`);
+  }
+}
+
+// bootstrap
+const svg = document.getElementById('gameSvg');
+const scoreEl = document.getElementById('score');
+
+new Game(svg, scoreEl);
+</script>

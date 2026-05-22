@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SVG ambiguous QR code generator</title>
+  <title>Q-Random code generator</title>
+  <meta name="description" content="double q-random code generator">
   <style>
     body { font-family: system-ui, sans-serif; padding: 2.5px; background: #f0f0f0; }
     input, button { padding: 5px; font-size: 16px; margin: 4px; }
@@ -10,14 +11,14 @@
   </style>
 </head>
 <body style="display:flex; flex-direction:column; align-items:center; align-content:center;">
-<h1 style="margin:5px">SVG ambiguous QR code generator</h1>
+<h1 style="margin:5px">Q-Random code generator</h1>
 <div style="display:flex; flex-direction:column; align-items:center; align-content:center;">
 
-  <div>first qr text: <input type="text" id="text" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
-  <div>second qr text: <input type="text" id="text2" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
+  <div>first code text: <input type="text" id="text" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
+  <div>second code text: <input type="text" id="text2" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
   <hr width="100%">
   <div> background hue (from 0 to 360): <input type=number id=bg> foreground hue (from 0 to 360): <input type=number id=fg> contrast: <input type=number id=contrast></div>
-  <button onclick="generateSVG();generateSVG2()">Generate QR</button>
+  <button onclick="generateSVG();generateSVG2()">Generate code</button>
   </div>
 <div style="display:grid">
   <div id="output" style="grid-area:1/1; margin-top: 20px; "></div>
