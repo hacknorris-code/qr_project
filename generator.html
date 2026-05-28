@@ -18,7 +18,7 @@
   <div>second code text: <input type="text" id="text2" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
   <hr width="100%">
   <div> background hue (from 0 to 360): <input type=number id=bg> foreground hue (from 0 to 360): <input type=number id=fg> contrast: <input type=number id=contrast></div>
-  <button onclick="generateSVG();generateSVG2()">Generate code</button>
+  <button onclick="generateSVG();generateSVG('2',false);">Generate code</button>
   </div>
 <div style="display:grid">
   <div id="output" style="grid-area:1/1; margin-top: 20px; "></div>
@@ -27,7 +27,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
   <script>
-  default_light = 0.18; // 0-black , 0.18 - perfect mid/ 4.5 contrast, 1 - white
+  default_light = 0.18; // 0-black , 0.18 - perfect mid/4.5 contrast, 1 - white
   function hslToRgb(h, s, l) {
     s /= 100;
     l /= 100;
@@ -82,149 +82,61 @@
     return `rgb(${r}, ${g}, ${b})`;
   }
 
-    function generateSVG() {
-      const text = document.getElementById('text').value.trim() || "Hello QR!";
-      const output = document.getElementById('output');
-      output.innerHTML = '';
+function generateSVG(suffix = '', hasBg = true) {
+  const text = document.getElementById(`text${suffix}`).value.trim() || "Hello QR!";
+  const output = document.getElementById(`output${suffix}`);
+  output.innerHTML = '';
 
-      // Create QR code (error correction level L, type number auto)
-      const qr = qrcode(0, 'H');
-      qr.addData(text);
-      qr.make();
+  const qr = qrcode(0, 'H');
+  qr.addData(text);
+  qr.make();
 
-      const moduleCount = qr.getModuleCount();   // size of the matrix (e.g. 25 for version 2)
-      const scale = 1;                           // 4× upscale per module
-      const moduleSize = 20;                     // base size of one module in SVG units
-      const size = moduleCount * moduleSize * scale;
+  const moduleCount = qr.getModuleCount();
+  const s = 20; // consolidated moduleSize * scale
+  const totalSize = (moduleCount + 8) * s; // 8 is quiet zone (4 * 2)
 
-      // Quiet zone (white border) in modules
-      const quiet = 4;
-      const totalModules = moduleCount + quiet * 2;
-      const totalSize = totalModules * moduleSize * scale;
-      function getLuminance(input) {
-        const t = input / 9;
+  const t = contrast.value / 9;
+  const Lfg = 0.5 + 0.45 * (t * 2 - 1);
+  const Linv = 0.5 - 0.45 * (t * 2 - 1);
+  const normalLum = Math.max(0, Math.min(1, Lfg));
+  const invertLum = Math.max(0, Math.min(1, Linv));
 
-        // perceptual curve (smooth, bounded)
-        const mid = 0.5;
-        const spread = 0.45;
+  let svgHTML = `<svg width="${totalSize}" height="${totalSize}" viewBox="0 0 ${totalSize} ${totalSize}" xmlns="http://www.w3.org/2000/svg">`;
 
-        const Lfg = mid + spread * (t * 2 - 1);      // -1..1 → range around mid
-        const Linv = mid - spread * (t * 2 - 1);
+  if (hasBg) {
+    svgHTML += `<rect width="100%" height="100%" fill="${rgbToCss(colorFromHueWithContrast(bg.value, 75, normalLum).rgb)}"/>`;
+  }
 
-        return {
-          normal: Math.max(0, Math.min(1, Lfg)),
-          inverted: Math.max(0, Math.min(1, Linv))
-        };
+  const offset = 4 * s; // 4 modules quiet zone
+  const fillStyle = rgbToCss(colorFromHueWithContrast(fg.value, 75, invertLum).rgb);
+  const half = s / 2;
+
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (qr.isDark(row, col)) {
+        const x = offset + col * s;
+        const y = offset + row * s;
+        
+        // If suffix is empty (''), use top-left/bottom-right corners. Otherwise, use bottom-left/top-right.
+        const y1 = suffix === '' ? y : y + half;
+        const y2 = suffix === '' ? y + half : y;
+
+        svgHTML += `
+          <rect x="${x}" y="${y1}" width="${half}" height="${half}" fill="${fillStyle}"/>
+          <rect x="${x + half}" y="${y2}" width="${half}" height="${half}" fill="${fillStyle}"/>
+        `;
       }
-      let svgHTML = `<svg width="${totalSize}" height="${totalSize}" viewBox="0 0 ${totalSize} ${totalSize}" xmlns="http://www.w3.org/2000/svg">`;
-
-      // Background (quiet zone + white areas)
-      svgHTML += `<rect width="100%" height="100%" fill="${rgbToCss(colorFromHueWithContrast(bg.value,75,getLuminance(contrast.value)["normal"]).rgb)}"/>`;
-
-      const offset = quiet * moduleSize * scale;   // start drawing content after quiet zone
-
-      for (let row = 0; row < moduleCount; row++) {
-        for (let col = 0; col < moduleCount; col++) {
-          const isDark = qr.isDark(row, col);
-          const x = offset + col * moduleSize * scale;
-          const y = offset + row * moduleSize * scale;
-          const s = moduleSize * scale;
-
-          if (isDark) {
-            // Blue square for black modules
-            svgHTML += `
-              <rect
-                x="${x}" y="${y}"
-                width="${s/2}" height="${s/2}"
-                fill="${rgbToCss(colorFromHueWithContrast(fg.value,75,getLuminance(contrast.value)["inverted"]).rgb)}"/>
-              <rect
-                x="${x+s/2}" y="${y+s/2}"
-                width="${s/2}" height="${s/2}"
-                fill="${rgbToCss(colorFromHueWithContrast(fg.value,75,getLuminance(contrast.value)["inverted"]).rgb)}"/>
-            `;
-          }
-        }
-      }
-
-      svgHTML += `</svg>`;
-
-      output.innerHTML = svgHTML;
     }
-    function generateSVG2() {
-      const text2 = document.getElementById('text2').value.trim() || "Hello QR!";
-      const output2 = document.getElementById('output2');
-      output2.innerHTML = '';
+  }
 
-      // Create QR code (error correction level L, type number auto)
-      const qr = qrcode(0, 'H');
-      qr.addData(text2);
-      qr.make();
-
-      const moduleCount = qr.getModuleCount();   // size of the matrix (e.g. 25 for version 2)
-      const scale = 1;                           // 4× upscale per module
-      const moduleSize = 20;                     // base size of one module in SVG units
-      const size = moduleCount * moduleSize * scale;
-
-      // Quiet zone (white border) in modules
-      const quiet = 4;
-      const totalModules = moduleCount + quiet * 2;
-      const totalSize = totalModules * moduleSize * scale;
-
-      function getLuminance(input) {
-        const t = input / 9;
-
-        // perceptual curve (smooth, bounded)
-        const mid = 0.5;
-        const spread = 0.45;
-
-        const Lfg = mid + spread * (t * 2 - 1);      // -1..1 → range around mid
-        const Linv = mid - spread * (t * 2 - 1);
-
-        return {
-          normal: Math.max(0, Math.min(1, Lfg)),
-          inverted: Math.max(0, Math.min(1, Linv))
-        };
-      }
-
-      let svgHTML = `<svg width="${totalSize}" height="${totalSize}" viewBox="0 0 ${totalSize} ${totalSize}" xmlns="http://www.w3.org/2000/svg">`;
-
-      // Background (quiet zone + white areas)
-      //svgHTML += `<rect width="100%" height="100%" fill="#ffffff"/>`;
-
-      const offset = quiet * moduleSize * scale;   // start drawing content after quiet zone
-
-      for (let row = 0; row < moduleCount; row++) {
-        for (let col = 0; col < moduleCount; col++) {
-          const isDark = qr.isDark(row, col);
-          const x = offset + col * moduleSize * scale;
-          const y = offset + row * moduleSize * scale;
-          const s = moduleSize * scale;
-
-          if (isDark) {
-            // Blue square for black modules
-            svgHTML += `
-              <rect
-                x="${x}" y="${y+s/2}"
-                width="${s/2}" height="${s/2}"
-                fill="${rgbToCss(colorFromHueWithContrast(fg.value,75,getLuminance(contrast.value)["inverted"]).rgb)}"/>
-              <rect
-                x="${x+s/2}" y="${y}"
-                width="${s/2}" height="${s/2}"
-                fill="${rgbToCss(colorFromHueWithContrast(fg.value,75,getLuminance(contrast.value)["inverted"]).rgb)}"/>
-            `;
-          }
-        }
-      }
-
-      svgHTML += `</svg>`;
-
-      output2.innerHTML = svgHTML;
-    }
+  output.innerHTML = svgHTML + `</svg>`;
+}
     // Demo on load
     window.onload = () => {
-      document.getElementById('text').value = "test";
-      generateSVG2();
+      document.getElementById('text').value = "0";
+      document.getElementById('text2').value = "1";
       generateSVG();
+      generateSVG('2',false);
     };
   </script>
 </body>
