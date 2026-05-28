@@ -88,7 +88,7 @@
       output.innerHTML = '';
 
       // Create QR code (error correction level L, type number auto)
-      const qr = qrcode(0, 'L');
+      const qr = qrcode(0, 'H');
       qr.addData(text);
       qr.make();
 
@@ -156,7 +156,7 @@
       output2.innerHTML = '';
 
       // Create QR code (error correction level L, type number auto)
-      const qr = qrcode(0, 'L');
+      const qr = qrcode(0, 'H');
       qr.addData(text2);
       qr.make();
 
