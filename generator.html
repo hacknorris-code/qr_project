@@ -18,7 +18,7 @@
   <div>second code text: <input type="text" id="text2" placeholder="Enter text (e.g. Hello World)" style="width:400px;"></div>
   <hr width="100%">
   <div> background hue (from 0 to 360): <input type=number id=bg> foreground hue (from 0 to 360): <input type=number id=fg> contrast: <input type=number id=contrast></div>
-  <button onclick="generateSVG();generateSVG('2',false);">Generate code</button>
+  <button onclick="generateSVG();generateSVG('2',false);">Generate code</button><button onclick="exportMixedQRToPNG()">Download code</button>
   </div>
 <div style="display:grid">
   <div id="output" style="grid-area:1/1; margin-top: 20px; "></div>
@@ -138,6 +138,56 @@ function generateSVG(suffix = '', hasBg = true) {
       generateSVG();
       generateSVG('2',false);
     };
+    function exportMixedQRToPNG() {
+  // 1. Grab both SVG elements from your output containers
+  const svg1 = document.getElementById('output').querySelector('svg');
+  const svg2 = document.getElementById('output2').querySelector('svg');
+
+  if (!svg1 || !svg2) {
+    alert("Please generate the QR codes first!");
+    return;
+  }
+
+  // 2. Get dimensions from the primary SVG
+  const width = svg1.getAttribute('width');
+  const height = svg1.getAttribute('height');
+
+  // 3. Create a canvas element
+  const canvas = document.createElement('canvas');
+  canvas.width = parseInt(width);
+  canvas.height = parseInt(height);
+  const ctx = canvas.getContext('2d');
+
+  // 4. Convert SVG elements to strings and XML data URLs
+  const serializer = new XMLSerializer();
+  const svgStr1 = serializer.serializeToString(svg1);
+  const svgStr2 = serializer.serializeToString(svg2);
+
+  const img1 = new Image();
+  const img2 = new Image();
+
+  // Create standard Data URLs (using encodeURIComponent is safer than btoa for special characters)
+  img1.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr1);
+  img2.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr2);
+
+  // 5. Layer them sequentially onto the canvas once loaded
+  img1.onload = () => {
+    ctx.drawImage(img1, 0, 0); // Draw background + base QR pattern
+    
+    img2.onload = () => {
+      ctx.drawImage(img2, 0, 0); // Overlay the second transparent QR pattern
+      
+      // 6. Trigger the PNG download
+      const pngUrl = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngUrl;
+      downloadLink.download = 'q-random_code.png';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+  };
+}
   </script>
 </body>
 </html>
